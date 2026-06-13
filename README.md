@@ -114,9 +114,14 @@ pipeline, and `rowpipe.HasValidate(stages)` to test for presence.
 
 ## Formats
 
-Non-CSV inputs are **sibling submodules**, each its own Go module with its own
-heavy dependency, so the core stays stdlib-only and a consumer pays only for the
-formats it imports:
+Every non-CSV format is a **sibling submodule** with its own `go.mod`, so the
+core's dependency set stays empty and a consumer pays only for the formats it
+imports. The split is by **role**, not weight: CSV stays in the core because it's
+the engine's built-in default `Source`/`Sink` (and namesake); every other format
+is a pluggable input adapter. Dependency isolation is what makes it matter for the
+heavy formats — xlsx and Parquet each pull in a large third-party tree — while
+`jsonl` carries no external dependency and lives here only to keep the pattern
+uniform:
 
 | Module                                  | Format                | Dependency                          |
 |-----------------------------------------|-----------------------|-------------------------------------|

@@ -8,22 +8,26 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **format-agnostic** (`Source` → `[]Stage` → `Sink`; see Architecture): CSV is only its built-in
 `Source`/`Sink` and the origin of the name, not a limit. Non-CSV formats reach the same pipeline as
 a `Source`: the xlsx/Parquet/JSONL adapters live in **sibling submodules** (`xlsx/`, `parquet/`,
-`jsonl/`) — each its own Go module with its own heavy dep (see each submodule's `README.md`) — so
-the core stays stdlib-only and a consumer pays only for the formats it imports. Module path
+`jsonl/`), each its own Go module (see each submodule's `README.md`), so the core stays stdlib-only
+and a consumer pays only for the formats it imports. The split is by **role**, not dependency weight:
+CSV is the core's built-in default `Source`/`Sink`; every other format is a pluggable adapter.
+Dependency isolation is the payoff for the heavy ones (xlsx → excelize, Parquet → parquet-go); jsonl
+carries no external dep and is a submodule only for uniformity. Module path
 `github.com/rowpipe/rowpipe`; **Go 1.26** toolchain (uses recent stdlib, e.g. `strings.SplitSeq`).
 The **core module has no external dependencies** (stdlib only).
 
 ## Repository layout (multi-module)
 
-A Go multi-module repo. The **core** (`github.com/rowpipe/rowpipe`, repo root) is stdlib-only. Three
-sibling submodules adapt heavy formats to `Source`, each with its own `go.mod` and `README.md`:
+A Go multi-module repo. The **core** (`github.com/rowpipe/rowpipe`, repo root) is stdlib-only and
+holds CSV, its built-in default `Source`/`Sink`. Three sibling submodules adapt non-CSV formats to
+`Source`, each with its own `go.mod` and `README.md`:
 
-- `xlsx/`    — Excel `.xlsx` worksheets (see `xlsx/README.md`)
-- `parquet/` — Parquet files (see `parquet/README.md`)
-- `jsonl/`   — JSON-Lines, flatten mode (see `jsonl/README.md`)
+- `xlsx/`    — Excel `.xlsx` worksheets — dep `github.com/xuri/excelize/v2` (see `xlsx/README.md`)
+- `parquet/` — Parquet files — dep `github.com/parquet-go/parquet-go` (see `parquet/README.md`)
+- `jsonl/`   — JSON-Lines, flatten mode — **no external dep** (stdlib `encoding/json`; see `jsonl/README.md`)
 
 Each submodule resolves the core locally via a `replace` directive pre-publish — see its `README.md`
-for the per-module dep and the publish steps. Root `go build ./...` / `go test ./...` cover the
+for the per-module dep (if any) and the publish steps. Root `go build ./...` / `go test ./...` cover the
 **core only**; test a submodule by `cd`-ing into it.
 
 ## Commands
