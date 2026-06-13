@@ -8,10 +8,11 @@ repeated column is rejected (flatten the schema or use `jsonl`).
 - **Dep:** `github.com/parquet-go/parquet-go`
 - **Module:** a sibling submodule of the rowpipe core, with its own `go.mod`.
 
-## Pre-publish replace
+## Local development
 
-The submodule resolves the core locally via `replace github.com/rowpipe/rowpipe => ../`.
-**Before publishing:** drop that `replace` line and pin a tagged core version.
+The repo-root `go.work` workspace resolves the core locally, so this submodule
+builds against the in-repo core from anywhere in the repo. **Before publishing:**
+pin a tagged core version in `require` (replacing the `v0.0.0` placeholder).
 
 ## Test
 

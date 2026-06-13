@@ -5,10 +5,9 @@ at a time from a `Source`, pushes it through an ordered list of `Stage`s, and
 writes survivors straight to a `Sink` — so peak memory is independent of input
 length, whether the file is a megabyte or a terabyte.
 
-The pipeline is **format-agnostic**: `Source → []Stage → Sink`. CSV is only the
-built-in `Source`/`Sink` and the origin of the name, not a limit. Excel, Parquet,
-and JSON-Lines reach the same pipeline through adapter submodules (see
-[Formats](#formats)).
+The pipeline is **format-agnostic**: `Source → []Stage → Sink`. CSV is the
+built-in `Source`/`Sink`; Excel, Parquet, and JSON-Lines reach the same pipeline
+through adapter submodules (see [Formats](#formats)).
 
 - **Core has zero dependencies** — standard library only.
 - **Constant memory** — no per-row allocation or whole-file buffering in the hot path.
@@ -116,12 +115,8 @@ pipeline, and `rowpipe.HasValidate(stages)` to test for presence.
 
 Every non-CSV format is a **sibling submodule** with its own `go.mod`, so the
 core's dependency set stays empty and a consumer pays only for the formats it
-imports. The split is by **role**, not weight: CSV stays in the core because it's
-the engine's built-in default `Source`/`Sink` (and namesake); every other format
-is a pluggable input adapter. Dependency isolation is what makes it matter for the
-heavy formats — xlsx and Parquet each pull in a large third-party tree — while
-`jsonl` carries no external dependency and lives here only to keep the pattern
-uniform:
+imports. CSV is the engine's built-in default `Source`/`Sink`; every other format
+is a pluggable input adapter:
 
 | Module                                  | Format                | Dependency                          |
 |-----------------------------------------|-----------------------|-------------------------------------|
@@ -134,7 +129,7 @@ Each adapter returns a type satisfying `rowpipe.Source`, so it feeds the same
 
 ## Extending
 
-- **A new input format** is a new `Source` (`Header()` + `Read()`) — keep heavy deps in a submodule.
+- **A new input format** is a new `Source` (`Header()` + `Read()`) — keep its dep in a submodule.
 - **A new transform** is a new `Stage`; register a verb in `compile.go` if you want it reachable through `Compile`.
 - **A new output** is a new `Sink` (`Write([]string)` + `Flush()`) — e.g. a Parquet or JSON encoder.
 
@@ -159,7 +154,8 @@ go test -bench . -benchmem -run '^$'
 ```
 
 Root `go build`/`go test` cover the core only; test a format adapter by `cd`-ing
-into its submodule.
+into its submodule. A committed `go.work` wires the submodules to the in-repo core,
+so adapters build against local changes without any per-module setup.
 
 ## License
 

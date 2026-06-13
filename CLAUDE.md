@@ -5,16 +5,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this is
 
 `rowpipe` is a constant-memory streaming row-transform engine in Go. The pipeline is
-**format-agnostic** (`Source` → `[]Stage` → `Sink`; see Architecture): CSV is only its built-in
-`Source`/`Sink` and the origin of the name, not a limit. Non-CSV formats reach the same pipeline as
-a `Source`: the xlsx/Parquet/JSONL adapters live in **sibling submodules** (`xlsx/`, `parquet/`,
-`jsonl/`), each its own Go module (see each submodule's `README.md`), so the core stays stdlib-only
-and a consumer pays only for the formats it imports. The split is by **role**, not dependency weight:
-CSV is the core's built-in default `Source`/`Sink`; every other format is a pluggable adapter.
-Dependency isolation is the payoff for the heavy ones (xlsx → excelize, Parquet → parquet-go); jsonl
-carries no external dep and is a submodule only for uniformity. Module path
-`github.com/rowpipe/rowpipe`; **Go 1.26** toolchain (uses recent stdlib, e.g. `strings.SplitSeq`).
-The **core module has no external dependencies** (stdlib only).
+**format-agnostic** (`Source` → `[]Stage` → `Sink`; see Architecture): CSV is the core's built-in
+default `Source`/`Sink`; every other format is a pluggable `Source` adapter. The xlsx/Parquet/JSONL
+adapters live in **sibling submodules** (`xlsx/`, `parquet/`, `jsonl/`), each its own Go module (see
+each submodule's `README.md`), so the core stays stdlib-only and a consumer pays only for the formats
+it imports. Module path `github.com/rowpipe/rowpipe`; **Go 1.26** toolchain (uses recent stdlib, e.g.
+`strings.SplitSeq`). The **core module has no external dependencies** (stdlib only).
 
 ## Repository layout (multi-module)
 
@@ -26,9 +22,9 @@ holds CSV, its built-in default `Source`/`Sink`. Three sibling submodules adapt 
 - `parquet/` — Parquet files — dep `github.com/parquet-go/parquet-go` (see `parquet/README.md`)
 - `jsonl/`   — JSON-Lines, flatten mode — **no external dep** (stdlib `encoding/json`; see `jsonl/README.md`)
 
-Each submodule resolves the core locally via a `replace` directive pre-publish — see its `README.md`
-for the per-module dep (if any) and the publish steps. Root `go build ./...` / `go test ./...` cover the
-**core only**; test a submodule by `cd`-ing into it.
+Each submodule resolves the core locally through the repo-root `go.work` workspace (committed) — see
+its `README.md` for the per-module dep (if any) and publish steps. Root `go build ./...` / `go test ./...`
+cover the **core only**; test a submodule by `cd`-ing into it.
 
 ## Commands
 
@@ -79,5 +75,5 @@ source line number.
 A new input format is a new **submodule**, not a core change: a package exposing a constructor that
 returns a type satisfying `rowpipe.Source` (`Header()` + `Read()`), with its own `go.mod` carrying the
 format's dep. Follow `parquet/` for a `ReaderAt`-based source or `jsonl/` for a stdlib reader; honor
-the row-ownership contract (reuse one output buffer, never retain a `Row`). Keep heavy deps out of the
-core module. A consumer wires detection/transport/encoding to it.
+the row-ownership contract (reuse one output buffer, never retain a `Row`). Keep the format's dep in
+its submodule, out of the core. A consumer wires detection/transport/encoding to it.
