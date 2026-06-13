@@ -67,10 +67,16 @@ func (s *Source) Schema() rowpipe.Schema { return s.schema }
 // cell round-trips into. Decimal/Date/Time/Timestamp logical columns stringify
 // (via valueString) into forms the scalar parsers don't reconstruct, so they stay
 // text for now — typed timestamp/date passthrough from Parquet is a follow-up.
+// Unsigned integers also stay text: valueString renders an INT physical value with
+// signed FormatInt, so a uint64 above math.MaxInt64 would stringify negative; typing
+// it ColInt would bake that wrong value into a typed column, so it keeps the
+// pre-typing text form instead.
 func columnType(t pq.Type) rowpipe.ColumnType {
 	if lt := t.LogicalType(); lt != nil {
 		switch {
 		case lt.Decimal != nil, lt.Date != nil, lt.Time != nil, lt.Timestamp != nil:
+			return rowpipe.ColString
+		case lt.Integer != nil && !lt.Integer.IsSigned:
 			return rowpipe.ColString
 		}
 	}

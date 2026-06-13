@@ -2,6 +2,7 @@ package rowpipe
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -166,4 +167,21 @@ func ParseTimestampMicros(cell string) (int64, error) {
 		return 0, err
 	}
 	return t.UTC().UnixMicro(), nil
+}
+
+// ParseInt64, ParseFloat64, and ParseBool are the shared scalar parsers a typed
+// Sink uses to turn a string cell into its physical value. They are the single
+// definition of what each ColumnType accepts, so the Parquet and Iceberg sinks (and
+// the validate stage that proves a column) can never drift on which cells parse.
+// Each trims surrounding whitespace, matching ParseTimestampMicros.
+func ParseInt64(cell string) (int64, error) {
+	return strconv.ParseInt(strings.TrimSpace(cell), 10, 64)
+}
+
+func ParseFloat64(cell string) (float64, error) {
+	return strconv.ParseFloat(strings.TrimSpace(cell), 64)
+}
+
+func ParseBool(cell string) (bool, error) {
+	return strconv.ParseBool(strings.TrimSpace(cell))
 }
